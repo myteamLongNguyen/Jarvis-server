@@ -27,12 +27,13 @@ export class PropertyService {
     query: PropertyQueryDto,
     ownerId: string,
   ): Promise<StandardPaginatedResponse<PropertyResponse>> {
-    const { offset = 0, limit = 20, status, propertyType, search } = query;
+    const { offset = 0, limit = 20, status, propertyType, category, search } = query;
     const [items, total] = await this.propertyRepo.findAndCount({
       where: {
         ownerId,
         ...(status ? { status } : {}),
         ...(propertyType ? { propertyType } : {}),
+        ...(category ? { category } : {}),
         ...(search ? { name: ILike(`%${search}%`) } : {}),
       },
       skip: offset,
@@ -81,6 +82,7 @@ export class PropertyService {
       country,
       propertyType,
       status,
+      category,
       purchaseDate,
       purchasePrice,
       purchaseCosts,
@@ -106,6 +108,7 @@ export class PropertyService {
       country,
       propertyType,
       status,
+      category,
       purchaseDate,
       purchasePrice,
       purchaseCosts,

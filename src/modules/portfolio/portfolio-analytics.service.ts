@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { PropertyEntity, PropertyStatus } from '../../entities/property.entity';
+import { PropertyEntity, PropertyStatus, PropertyCategory } from '../../entities/property.entity';
 import { RentalIncomeEntity } from '../../entities/rental-income.entity';
 import { PropertyExpenseEntity } from '../../entities/property-expense.entity';
 import { MaintenanceRecordEntity } from '../../entities/maintenance-record.entity';
@@ -151,9 +151,13 @@ export class PortfolioAnalyticsService {
     };
   }
 
-  async getPortfolioSummary(ownerId: string): Promise<PortfolioSummaryResponse> {
+  async getPortfolioSummary(ownerId: string, includePersonal = false): Promise<PortfolioSummaryResponse> {
     const properties = await this.propertyRepo.find({
-      where: { ownerId, status: PropertyStatus.ACTIVE },
+      where: {
+        ownerId,
+        status: PropertyStatus.ACTIVE,
+        ...(includePersonal ? {} : { category: PropertyCategory.INVESTMENT }),
+      },
     });
 
     const asOfDate = new Date();
@@ -208,11 +212,18 @@ export class PortfolioAnalyticsService {
     };
   }
 
-  async getIncomeByProperty(ownerId: string, from?: string, to?: string): Promise<PropertyRankingItem[]> {
+  async getIncomeByProperty(
+    ownerId: string,
+    from?: string,
+    to?: string,
+    includePersonal = false,
+  ): Promise<PropertyRankingItem[]> {
     const fromDate = from ? new Date(from) : yearStartOf(new Date());
     const toDate = to ? new Date(to) : new Date();
 
-    const properties = await this.propertyRepo.find({ where: { ownerId } });
+    const properties = await this.propertyRepo.find({
+      where: { ownerId, ...(includePersonal ? {} : { category: PropertyCategory.INVESTMENT }) },
+    });
     const results: PropertyRankingItem[] = [];
     for (const property of properties) {
       const { net } = await this.getNetIncome(property.id, ownerId, fromDate, toDate);
@@ -222,9 +233,13 @@ export class PortfolioAnalyticsService {
     return results.sort((a, b) => b.value - a.value);
   }
 
-  async getReturnByProperty(ownerId: string, asOf?: string): Promise<PropertyRankingItem[]> {
+  async getReturnByProperty(ownerId: string, asOf?: string, includePersonal = false): Promise<PropertyRankingItem[]> {
     const properties = await this.propertyRepo.find({
-      where: { ownerId, status: PropertyStatus.ACTIVE },
+      where: {
+        ownerId,
+        status: PropertyStatus.ACTIVE,
+        ...(includePersonal ? {} : { category: PropertyCategory.INVESTMENT }),
+      },
     });
 
     const results: PropertyRankingItem[] = [];
@@ -236,11 +251,16 @@ export class PortfolioAnalyticsService {
     return results.sort((a, b) => b.value - a.value);
   }
 
-  async getMaintenanceByProperty(ownerId: string, from?: string, to?: string): Promise<PropertyRankingItem[]> {
+  async getMaintenanceByProperty(
+    ownerId: string,
+    from?: string,
+    to?: string,
+    includePersonal = false,
+  ): Promise<PropertyRankingItem[]> {
     const fromDate = from ? new Date(from) : yearStartOf(new Date());
     const toDate = to ? new Date(to) : new Date();
 
-    const rows = await this.maintenanceRecordRepo
+    const qb = this.maintenanceRecordRepo
       .createQueryBuilder('record')
       .innerJoin('record.property', 'property')
       .select('property.id', 'propertyId')
@@ -250,7 +270,13 @@ export class PortfolioAnalyticsService {
       .andWhere('record.service_date BETWEEN :from AND :to', {
         from: toDateStr(fromDate),
         to: toDateStr(toDate),
-      })
+      });
+
+    if (!includePersonal) {
+      qb.andWhere('property.category = :category', { category: PropertyCategory.INVESTMENT });
+    }
+
+    const rows = await qb
       .groupBy('property.id')
       .addGroupBy('property.name')
       .orderBy('value', 'DESC')

@@ -5,17 +5,21 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import jwt from 'jsonwebtoken';
+import { jwtVerify, createRemoteJWKSet } from 'jose';
 import { Request } from 'express';
 import config from '../core/config';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { SupabaseJwtPayload } from '../types/auth';
 
+const jwks = createRemoteJWKSet(
+  new URL('/auth/v1/.well-known/jwks.json', config.auth.supabaseUrl),
+);
+
 @Injectable()
 export class SupabaseAuthGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(
       IS_PUBLIC_KEY,
       [context.getHandler(), context.getClass()],
@@ -32,15 +36,13 @@ export class SupabaseAuthGuard implements CanActivate {
     }
 
     try {
-      const payload = jwt.verify(
-        token,
-        config.auth.supabaseJwtSecret,
-      ) as SupabaseJwtPayload;
+      const { payload } = await jwtVerify(token, jwks);
+      const claims = payload as unknown as SupabaseJwtPayload;
 
       request.user = {
-        id: payload.sub,
-        email: payload.email,
-        role: payload.role,
+        id: claims.sub,
+        email: claims.email,
+        role: claims.role,
       };
 
       return true;

@@ -63,6 +63,6 @@ async function bootstrap() {
   app.useGlobalFilters(new BadRequestExceptionFilter());
   app.useGlobalFilters(new ConflictExceptionFilter());
 
-  await app.listen(config.app.listenPort);
+  await app.listen(config.app.listenPort, config.app.host);
 }
 bootstrap();

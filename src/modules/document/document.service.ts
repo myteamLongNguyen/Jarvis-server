@@ -1,26 +1,62 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { DocumentEntity } from '../../entities/document.entity';
+import { v4 as uuidv4 } from 'uuid';
+import { DocumentEntity, StorageProvider } from '../../entities/document.entity';
 import {
   CreateDocumentRequest,
   UpdateDocumentRequest,
+  UploadDocumentRequest,
   DocumentQueryDto,
   DocumentResponse,
 } from '../../dto/document.dto';
 import { StandardPaginatedResponse } from '../../dto/standard';
+import { SupabaseAdminService } from '../../core/supabase/supabase-admin.service';
+
+const SIGNED_URL_TTL_SECONDS = 3600;
 
 @Injectable()
 export class DocumentService {
   constructor(
     @InjectRepository(DocumentEntity)
     private readonly documentRepo: Repository<DocumentEntity>,
+    private readonly supabaseAdmin: SupabaseAdminService,
   ) {}
 
   async create(req: CreateDocumentRequest, ownerId: string): Promise<DocumentResponse> {
-    const entity = this.documentRepo.create({ ...req, ownerId });
+    const entity = this.documentRepo.create({
+      ...req,
+      ownerId,
+      storageProvider: StorageProvider.GOOGLE_DRIVE,
+    });
     const saved = await this.documentRepo.save(entity);
-    return this.toResponse(saved);
+    return this.toResponseWithUrl(saved);
+  }
+
+  async upload(
+    file: Express.Multer.File,
+    req: UploadDocumentRequest,
+    ownerId: string,
+  ): Promise<DocumentResponse> {
+    const storagePath = `${ownerId}/${req.propertyId ?? 'unassigned'}/${uuidv4()}-${this.sanitizeFilename(file.originalname)}`;
+
+    const { error } = await this.supabaseAdmin.client.storage
+      .from(this.supabaseAdmin.bucket)
+      .upload(storagePath, file.buffer, { contentType: file.mimetype });
+    if (error) {
+      throw new InternalServerErrorException(`Failed to upload file: ${error.message}`);
+    }
+
+    const entity = this.documentRepo.create({
+      ...req,
+      ownerId,
+      storageProvider: StorageProvider.SUPABASE,
+      storagePath,
+      mimeType: file.mimetype,
+      fileSizeBytes: file.size,
+    });
+    const saved = await this.documentRepo.save(entity);
+    return this.toResponseWithUrl(saved);
   }
 
   async findAll(
@@ -40,19 +76,21 @@ export class DocumentService {
       order: { documentDate: 'DESC' },
     });
 
-    return { offset, limit, total, items: items.map((item) => this.toResponse(item)) };
+    const responses = items.map((item) => this.toResponse(item));
+    await this.attachUrls(items, responses);
+    return { offset, limit, total, items: responses };
   }
 
   async findOne(id: string, ownerId: string): Promise<DocumentResponse> {
     const entity = await this.findEntityOrFail(id, ownerId);
-    return this.toResponse(entity);
+    return this.toResponseWithUrl(entity);
   }
 
   async update(id: string, req: UpdateDocumentRequest, ownerId: string): Promise<DocumentResponse> {
     const entity = await this.findEntityOrFail(id, ownerId);
     Object.assign(entity, req);
     const saved = await this.documentRepo.save(entity);
-    return this.toResponse(saved);
+    return this.toResponseWithUrl(saved);
   }
 
   async remove(id: string, ownerId: string): Promise<void> {
@@ -110,5 +148,45 @@ export class DocumentService {
       createdAt,
       updatedAt,
     };
+  }
+
+  private async toResponseWithUrl(entity: DocumentEntity): Promise<DocumentResponse> {
+    const response = this.toResponse(entity);
+    await this.attachUrls([entity], [response]);
+    return response;
+  }
+
+  private async attachUrls(entities: DocumentEntity[], responses: DocumentResponse[]): Promise<void> {
+    const supabaseIndices: number[] = [];
+    const paths: string[] = [];
+
+    entities.forEach((entity, index) => {
+      if (entity.storageProvider === StorageProvider.SUPABASE && entity.storagePath) {
+        supabaseIndices.push(index);
+        paths.push(entity.storagePath);
+      } else if (entity.googleDriveFileId) {
+        responses[index].url = `https://drive.google.com/file/d/${entity.googleDriveFileId}/view`;
+      }
+    });
+
+    if (!paths.length) {
+      return;
+    }
+
+    const { data, error } = await this.supabaseAdmin.client.storage
+      .from(this.supabaseAdmin.bucket)
+      .createSignedUrls(paths, SIGNED_URL_TTL_SECONDS);
+
+    if (error || !data) {
+      return;
+    }
+
+    data.forEach((result, i) => {
+      responses[supabaseIndices[i]].url = result.signedUrl ?? undefined;
+    });
+  }
+
+  private sanitizeFilename(name: string): string {
+    return name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
   }
 }

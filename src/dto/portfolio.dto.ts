@@ -1,12 +1,29 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsDateString } from 'class-validator';
+import { IsOptional, IsDateString, IsBoolean } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { DateRangeQueryDto } from './pagination.dto';
+
+const toBoolean = ({ value }: { value: unknown }) => value === 'true' || value === true;
 
 export class AsOfQueryDto {
   @ApiPropertyOptional({ description: 'Defaults to today' })
   @IsOptional()
   @IsDateString()
   asOf?: string;
+
+  @ApiPropertyOptional({ description: 'Include PERSONAL-category properties (excluded by default)', default: false })
+  @IsOptional()
+  @Transform(toBoolean)
+  @IsBoolean()
+  includePersonal?: boolean;
+}
+
+export class PortfolioSummaryQueryDto {
+  @ApiPropertyOptional({ description: 'Include PERSONAL-category properties (excluded by default)', default: false })
+  @IsOptional()
+  @Transform(toBoolean)
+  @IsBoolean()
+  includePersonal?: boolean;
 }
 
 export class ReturnResponse {
@@ -45,7 +62,13 @@ export class PortfolioSummaryResponse {
   @ApiProperty() overdueInvoicesCount: number;
 }
 
-export class PropertyRankingQueryDto extends DateRangeQueryDto {}
+export class PropertyRankingQueryDto extends DateRangeQueryDto {
+  @ApiPropertyOptional({ description: 'Include PERSONAL-category properties (excluded by default)', default: false })
+  @IsOptional()
+  @Transform(toBoolean)
+  @IsBoolean()
+  includePersonal?: boolean;
+}
 
 export class PropertyRankingItem {
   @ApiProperty() propertyId: string;

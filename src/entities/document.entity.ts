@@ -32,6 +32,11 @@ export enum DocumentClassificationStatus {
   USER_CONFIRMED = 'USER_CONFIRMED',
 }
 
+export enum StorageProvider {
+  GOOGLE_DRIVE = 'GOOGLE_DRIVE',
+  SUPABASE = 'SUPABASE',
+}
+
 @Entity('documents')
 export class DocumentEntity extends BaseEntity {
   @Column({ type: 'uuid', name: 'property_id', nullable: true })
@@ -53,7 +58,13 @@ export class DocumentEntity extends BaseEntity {
   @Column({ type: 'date', name: 'document_date' })
   documentDate: string;
 
-  @Column({ type: 'varchar', length: 255, name: 'google_drive_file_id', unique: true })
+  @Column({ type: 'enum', enum: StorageProvider, name: 'storage_provider', default: StorageProvider.SUPABASE })
+  storageProvider: StorageProvider;
+
+  @Column({ type: 'varchar', length: 1000, name: 'storage_path', nullable: true })
+  storagePath: string;
+
+  @Column({ type: 'varchar', length: 255, name: 'google_drive_file_id', unique: true, nullable: true })
   googleDriveFileId: string;
 
   @Column({ type: 'varchar', length: 500, name: 'google_drive_folder_path', nullable: true })

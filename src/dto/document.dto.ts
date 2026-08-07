@@ -67,6 +67,30 @@ export class CreateDocumentRequest {
 
 export class UpdateDocumentRequest extends PartialType(CreateDocumentRequest) {}
 
+export class UploadDocumentRequest {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  propertyId?: string;
+
+  @ApiProperty({ enum: DocumentType })
+  @IsEnum(DocumentType)
+  documentType: DocumentType;
+
+  @ApiProperty()
+  @IsString()
+  title: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @ApiProperty()
+  @IsDateString()
+  documentDate: string;
+}
+
 export class DocumentQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
@@ -92,7 +116,7 @@ export class DocumentResponse {
   @ApiProperty() title: string;
   @ApiPropertyOptional() description?: string;
   @ApiProperty() documentDate: string;
-  @ApiProperty() googleDriveFileId: string;
+  @ApiPropertyOptional() googleDriveFileId?: string;
   @ApiPropertyOptional() googleDriveFolderPath?: string;
   @ApiPropertyOptional() mimeType?: string;
   @ApiPropertyOptional() fileSizeBytes?: number;
@@ -101,6 +125,7 @@ export class DocumentResponse {
   @ApiProperty({ enum: DocumentClassificationStatus }) classificationStatus: DocumentClassificationStatus;
   @ApiPropertyOptional() ingestedAt?: Date;
   @ApiPropertyOptional() classifiedAt?: Date;
+  @ApiPropertyOptional() url?: string;
   @ApiProperty() createdAt: Date;
   @ApiProperty() updatedAt: Date;
 }

@@ -8,7 +8,7 @@ import {
   IsDateString,
   MaxLength,
 } from 'class-validator';
-import { PropertyType, PropertyStatus } from '../entities/property.entity';
+import { PropertyType, PropertyStatus, PropertyCategory } from '../entities/property.entity';
 import { PaginationQueryDto } from './pagination.dto';
 
 export class CreatePropertyRequest {
@@ -57,6 +57,11 @@ export class CreatePropertyRequest {
   @IsOptional()
   @IsEnum(PropertyStatus)
   status?: PropertyStatus;
+
+  @ApiPropertyOptional({ enum: PropertyCategory, default: PropertyCategory.INVESTMENT })
+  @IsOptional()
+  @IsEnum(PropertyCategory)
+  category?: PropertyCategory;
 
   @ApiProperty()
   @IsDateString()
@@ -115,6 +120,11 @@ export class PropertyQueryDto extends PaginationQueryDto {
   @IsEnum(PropertyType)
   propertyType?: PropertyType;
 
+  @ApiPropertyOptional({ enum: PropertyCategory })
+  @IsOptional()
+  @IsEnum(PropertyCategory)
+  category?: PropertyCategory;
+
   @ApiPropertyOptional({ description: 'Search by property name' })
   @IsOptional()
   @IsString()
@@ -133,6 +143,7 @@ export class PropertyResponse {
   @ApiProperty() country: string;
   @ApiProperty({ enum: PropertyType }) propertyType: PropertyType;
   @ApiProperty({ enum: PropertyStatus }) status: PropertyStatus;
+  @ApiProperty({ enum: PropertyCategory }) category: PropertyCategory;
   @ApiProperty() purchaseDate: string;
   @ApiProperty() purchasePrice: number;
   @ApiProperty() purchaseCosts: number;

@@ -41,6 +41,10 @@ const config: Config = {
     supabaseUrl: process.env.SUPABASE_URL,
     supabaseJwtSecret: process.env.SUPABASE_JWT_SECRET,
   },
+  storage: {
+    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    bucket: process.env.SUPABASE_STORAGE_BUCKET,
+  },
 };
 
 export default config;

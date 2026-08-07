@@ -27,6 +27,11 @@ export enum PropertyStatus {
   ARCHIVED = 'ARCHIVED',
 }
 
+export enum PropertyCategory {
+  INVESTMENT = 'INVESTMENT',
+  PERSONAL = 'PERSONAL',
+}
+
 @Entity('properties')
 export class PropertyEntity extends BaseEntity {
   @Column({ type: 'varchar', length: 150 })
@@ -55,6 +60,9 @@ export class PropertyEntity extends BaseEntity {
 
   @Column({ type: 'enum', enum: PropertyStatus, default: PropertyStatus.ACTIVE })
   status: PropertyStatus;
+
+  @Column({ type: 'enum', enum: PropertyCategory, name: 'category', default: PropertyCategory.INVESTMENT })
+  category: PropertyCategory;
 
   @Column({ type: 'date', name: 'purchase_date' })
   purchaseDate: string;

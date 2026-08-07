@@ -21,8 +21,14 @@ type AuthConfig = {
   supabaseJwtSecret: string;
 };
 
+type StorageConfig = {
+  supabaseServiceRoleKey: string;
+  bucket: string;
+};
+
 export type Config = {
   database: DBConfig;
   app: AppConfig;
   auth: AuthConfig;
+  storage: StorageConfig;
 };

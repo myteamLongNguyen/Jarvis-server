@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { PortfolioAnalyticsService } from './portfolio-analytics.service';
 import {
   AsOfQueryDto,
+  PortfolioSummaryQueryDto,
   PortfolioSummaryResponse,
   PropertyRankingItem,
   PropertyRankingQueryDto,
@@ -20,9 +21,10 @@ export class PortfolioController {
   @Get('summary')
   @ApiOperation({ summary: 'Portfolio-wide totals across all properties' })
   async getSummary(
+    @Query() query: PortfolioSummaryQueryDto,
     @AuthUser() user: AuthUserPayload,
   ): Promise<StandardDataResponse<PortfolioSummaryResponse>> {
-    const data = await this.portfolioAnalyticsService.getPortfolioSummary(user.id);
+    const data = await this.portfolioAnalyticsService.getPortfolioSummary(user.id, query.includePersonal);
     return { success: true, message: 'Portfolio summary', data };
   }
 
@@ -32,7 +34,12 @@ export class PortfolioController {
     @Query() query: PropertyRankingQueryDto,
     @AuthUser() user: AuthUserPayload,
   ): Promise<StandardDataResponse<PropertyRankingItem[]>> {
-    const data = await this.portfolioAnalyticsService.getIncomeByProperty(user.id, query.from, query.to);
+    const data = await this.portfolioAnalyticsService.getIncomeByProperty(
+      user.id,
+      query.from,
+      query.to,
+      query.includePersonal,
+    );
     return { success: true, message: 'Income by property', data };
   }
 
@@ -42,7 +49,7 @@ export class PortfolioController {
     @Query() query: AsOfQueryDto,
     @AuthUser() user: AuthUserPayload,
   ): Promise<StandardDataResponse<PropertyRankingItem[]>> {
-    const data = await this.portfolioAnalyticsService.getReturnByProperty(user.id, query.asOf);
+    const data = await this.portfolioAnalyticsService.getReturnByProperty(user.id, query.asOf, query.includePersonal);
     return { success: true, message: 'Return by property', data };
   }
 
@@ -52,7 +59,12 @@ export class PortfolioController {
     @Query() query: PropertyRankingQueryDto,
     @AuthUser() user: AuthUserPayload,
   ): Promise<StandardDataResponse<PropertyRankingItem[]>> {
-    const data = await this.portfolioAnalyticsService.getMaintenanceByProperty(user.id, query.from, query.to);
+    const data = await this.portfolioAnalyticsService.getMaintenanceByProperty(
+      user.id,
+      query.from,
+      query.to,
+      query.includePersonal,
+    );
     return { success: true, message: 'Maintenance by property', data };
   }
 }

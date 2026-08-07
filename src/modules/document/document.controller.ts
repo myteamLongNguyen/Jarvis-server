@@ -1,9 +1,23 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  Query,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { DocumentService } from './document.service';
 import {
   CreateDocumentRequest,
   UpdateDocumentRequest,
+  UploadDocumentRequest,
   DocumentQueryDto,
   DocumentResponse,
 } from '../../dto/document.dto';
@@ -26,6 +40,36 @@ export class DocumentController {
   ): Promise<StandardDataResponse<DocumentResponse>> {
     const data = await this.documentService.create(req, user.id);
     return { success: true, message: 'Document created', data };
+  }
+
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 20 * 1024 * 1024 } }))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        propertyId: { type: 'string' },
+        documentType: { type: 'string' },
+        title: { type: 'string' },
+        description: { type: 'string' },
+        documentDate: { type: 'string', format: 'date' },
+      },
+    },
+  })
+  @ApiOperation({ summary: 'Upload a document/photo file to Supabase Storage' })
+  @ApiResponse({ status: 201, type: DocumentResponse })
+  async upload(
+    @UploadedFile() file: Express.Multer.File,
+    @Body() req: UploadDocumentRequest,
+    @AuthUser() user: AuthUserPayload,
+  ): Promise<StandardDataResponse<DocumentResponse>> {
+    if (!file) {
+      throw new BadRequestException('file is required');
+    }
+    const data = await this.documentService.upload(file, req, user.id);
+    return { success: true, message: 'Document uploaded', data };
   }
 
   @Get()
