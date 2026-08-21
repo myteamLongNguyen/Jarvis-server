@@ -182,6 +182,23 @@ export class InvoiceQueryDto extends DateRangeQueryDto {
   direction?: InvoiceDirection;
 }
 
+export class InvoiceScanResponse {
+  @ApiPropertyOptional({ description: 'Best-guess property match, based on address/suburb text found in the filename or PDF content' })
+  propertyId?: string;
+
+  @ApiPropertyOptional()
+  propertyName?: string;
+
+  @ApiPropertyOptional({ enum: ['HIGH', 'LOW'], description: 'How confident the free-text match is — always double-check before saving' })
+  propertyMatchConfidence?: 'HIGH' | 'LOW';
+
+  @ApiPropertyOptional({ description: 'Best-guess issue date found in the document, ISO format' })
+  issueDate?: string;
+
+  @ApiPropertyOptional({ description: 'Best-guess total amount found near a "total" label in the document' })
+  totalAmount?: number;
+}
+
 export class InvoiceLineItemResponse {
   @ApiProperty() id: string;
   @ApiProperty() invoiceId: string;

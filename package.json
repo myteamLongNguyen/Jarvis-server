@@ -25,7 +25,9 @@
     "migration:create": "npm run typeorm -- migration:create",
     "migration:run": "npm run typeorm -- migration:run -d src/core/database/data-source.ts",
     "migration:revert": "npm run typeorm -- migration:revert -d src/core/database/data-source.ts",
-    "seed:carr-group-real": "ts-node src/scripts/seed-carr-group-real.ts"
+    "seed:carr-group-real": "ts-node src/scripts/seed-carr-group-real.ts",
+    "update:purchase-info": "ts-node src/scripts/update-purchase-info-2026-08.ts",
+    "seed:depreciation-996-nepean": "ts-node src/scripts/seed-depreciation-996-nepean.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -39,6 +41,7 @@
     "jose": "^6.2.3",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.2.0",
+    "pdf-parse": "^1.1.1",
     "pg": "^8.13.1",
     "reflect-metadata": "^0.2.2",
     "rimraf": "^6.0.1",
@@ -56,6 +59,7 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/multer": "^2.2.0",
     "@types/node": "^22.10.7",
+    "@types/pdf-parse": "^1.1.5",
     "@types/supertest": "^6.0.2",
     "@typescript-eslint/eslint-plugin": "^8.20.0",
     "@typescript-eslint/parser": "^8.20.0",

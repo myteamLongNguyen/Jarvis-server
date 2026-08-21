@@ -1,11 +1,26 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  Query,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { InvoiceService } from './invoice.service';
+import { InvoiceScanService } from './invoice-scan.service';
 import {
   ClassifyInvoiceRequest,
   CreateInvoiceRequest,
   InvoiceQueryDto,
   InvoiceResponse,
+  InvoiceScanResponse,
   PayInvoiceRequest,
   UpdateInvoiceRequest,
 } from '../../dto/invoice.dto';
@@ -17,7 +32,30 @@ import { AuthUserPayload } from '../../types/auth';
 @ApiTags('invoices')
 @Controller('invoices')
 export class InvoiceController {
-  constructor(private readonly invoiceService: InvoiceService) {}
+  constructor(
+    private readonly invoiceService: InvoiceService,
+    private readonly invoiceScanService: InvoiceScanService,
+  ) {}
+
+  @Post('scan')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 20 * 1024 * 1024 } }))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } } })
+  @ApiOperation({
+    summary:
+      'Free, non-AI scan of an invoice file: matches filename/PDF text against known property addresses and looks for a date/total — always treat as a pre-fill suggestion, not ground truth',
+  })
+  @ApiResponse({ status: 201, type: InvoiceScanResponse })
+  async scan(
+    @UploadedFile() file: Express.Multer.File,
+    @AuthUser() user: AuthUserPayload,
+  ): Promise<StandardDataResponse<InvoiceScanResponse>> {
+    if (!file) {
+      throw new BadRequestException('file is required');
+    }
+    const data = await this.invoiceScanService.scan(file, user.id);
+    return { success: true, message: 'Invoice scanned', data };
+  }
 
   @Post()
   @ApiOperation({ summary: 'Create an invoice from a parsed document' })

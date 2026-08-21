@@ -75,3 +75,43 @@ export class PropertyRankingItem {
   @ApiProperty() propertyName: string;
   @ApiProperty() value: number;
 }
+
+export class FinancialYearReportQueryDto {
+  @ApiPropertyOptional({ description: 'e.g. "2025-2026" for FY2025-26. Defaults to the current Australian financial year.' })
+  @IsOptional()
+  fy?: string;
+
+  @ApiPropertyOptional({ description: 'Include PERSONAL-category properties (excluded by default)', default: false })
+  @IsOptional()
+  @Transform(toBoolean)
+  @IsBoolean()
+  includePersonal?: boolean;
+}
+
+export class PropertyFinancialYearLine {
+  @ApiProperty() propertyId: string;
+  @ApiProperty() propertyName: string;
+  @ApiProperty() grossIncome: number;
+  @ApiProperty() netIncome: number;
+  @ApiProperty() expensesTotal: number;
+  @ApiPropertyOptional() depreciationDiminishingValue?: number;
+  @ApiPropertyOptional() depreciationPrimeCost?: number;
+  @ApiPropertyOptional() openingValuation?: number;
+  @ApiPropertyOptional() closingValuation?: number;
+}
+
+export class FinancialYearReportTotals {
+  @ApiProperty() grossIncome: number;
+  @ApiProperty() netIncome: number;
+  @ApiProperty() expensesTotal: number;
+  @ApiProperty() depreciationDiminishingValue: number;
+  @ApiProperty() depreciationPrimeCost: number;
+}
+
+export class FinancialYearReportResponse {
+  @ApiProperty() financialYearLabel: string;
+  @ApiProperty() periodStart: string;
+  @ApiProperty() periodEnd: string;
+  @ApiProperty({ type: [PropertyFinancialYearLine] }) properties: PropertyFinancialYearLine[];
+  @ApiProperty() totals: FinancialYearReportTotals;
+}

@@ -6,6 +6,7 @@ import { PropertyExpenseEntity } from '../../entities/property-expense.entity';
 import { MaintenanceRecordEntity } from '../../entities/maintenance-record.entity';
 import { ValuationEntity } from '../../entities/valuation.entity';
 import { InvoiceEntity } from '../../entities/invoice.entity';
+import { DepreciationScheduleEntity } from '../../entities/depreciation-schedule.entity';
 import { PortfolioController } from './portfolio.controller';
 import { PortfolioAnalyticsService } from './portfolio-analytics.service';
 
@@ -18,6 +19,7 @@ import { PortfolioAnalyticsService } from './portfolio-analytics.service';
       MaintenanceRecordEntity,
       ValuationEntity,
       InvoiceEntity,
+      DepreciationScheduleEntity,
     ]),
   ],
   controllers: [PortfolioController],

@@ -12,10 +12,7 @@ import { InvoiceEntity, InvoiceStatus } from '../../entities/invoice.entity';
 import { PropertySummaryResponse, ReturnResponse } from '../../dto/portfolio.dto';
 import { StandardPaginatedResponse } from '../../dto/standard';
 import { InvoiceQueryDto, InvoiceResponse } from '../../dto/invoice.dto';
-
-function yearStartOf(date: Date): Date {
-  return new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-}
+import { financialYearStartOf } from '../../core/utils';
 
 function toDateStr(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -43,7 +40,7 @@ export class PropertyAnalyticsService {
   async getSummary(propertyId: string, ownerId: string): Promise<PropertySummaryResponse> {
     const property = await this.propertyService.findOne(propertyId, ownerId);
     const asOfDate = new Date();
-    const windowStart = yearStartOf(asOfDate);
+    const windowStart = financialYearStartOf(asOfDate);
 
     const activeLeases = await this.leaseRepo.count({
       where: { propertyId, ownerId, status: LeaseStatus.ACTIVE },

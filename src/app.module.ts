@@ -15,6 +15,7 @@ import { RentalIncomeModule } from './modules/rental-income/rental-income.module
 import { PropertyExpenseModule } from './modules/property-expense/property-expense.module';
 import { PropertyStatementModule } from './modules/property-statement/property-statement.module';
 import { ValuationModule } from './modules/valuation/valuation.module';
+import { DepreciationScheduleModule } from './modules/depreciation-schedule/depreciation-schedule.module';
 import { MaintenanceRecordModule } from './modules/maintenance-record/maintenance-record.module';
 import { DocumentModule } from './modules/document/document.module';
 import { PortfolioModule } from './modules/portfolio/portfolio.module';
@@ -33,6 +34,7 @@ import { PortfolioModule } from './modules/portfolio/portfolio.module';
     PropertyExpenseModule,
     PropertyStatementModule,
     ValuationModule,
+    DepreciationScheduleModule,
     MaintenanceRecordModule,
     DocumentModule,
     PortfolioModule,

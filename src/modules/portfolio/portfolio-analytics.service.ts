@@ -7,7 +7,14 @@ import { PropertyExpenseEntity } from '../../entities/property-expense.entity';
 import { MaintenanceRecordEntity } from '../../entities/maintenance-record.entity';
 import { ValuationEntity } from '../../entities/valuation.entity';
 import { InvoiceEntity, InvoiceStatus } from '../../entities/invoice.entity';
-import { ReturnResponse, PortfolioSummaryResponse, PropertyRankingItem } from '../../dto/portfolio.dto';
+import { DepreciationScheduleEntity, DepreciationMethod } from '../../entities/depreciation-schedule.entity';
+import {
+  ReturnResponse,
+  PortfolioSummaryResponse,
+  PropertyRankingItem,
+  FinancialYearReportResponse,
+} from '../../dto/portfolio.dto';
+import { financialYearStartOf, financialYearLabel } from '../../core/utils';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -17,10 +24,6 @@ function daysInWindow(from: Date, to: Date): number {
 
 function annualise(periodValue: number, from: Date, to: Date): number {
   return periodValue * (365 / daysInWindow(from, to));
-}
-
-function yearStartOf(date: Date): Date {
-  return new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
 }
 
 function toDateStr(date: Date): string {
@@ -42,6 +45,8 @@ export class PortfolioAnalyticsService {
     private readonly valuationRepo: Repository<ValuationEntity>,
     @InjectRepository(InvoiceEntity)
     private readonly invoiceRepo: Repository<InvoiceEntity>,
+    @InjectRepository(DepreciationScheduleEntity)
+    private readonly depreciationScheduleRepo: Repository<DepreciationScheduleEntity>,
   ) {}
 
   /** Gross/net rental income for a property in a window. Net here is the agent-statement net (before general property expenses). */
@@ -109,6 +114,18 @@ export class PortfolioAnalyticsService {
     return valuation ? valuation.valuationAmount : null;
   }
 
+  /** Most recent valuation on or before `asOf` - used for a report's opening/closing valuation, unlike getLatestValuationAmount which ignores date. */
+  async getValuationAsOf(propertyId: string, ownerId: string, asOf: Date): Promise<number | undefined> {
+    const valuation = await this.valuationRepo
+      .createQueryBuilder('valuation')
+      .where('valuation.owner_id = :ownerId', { ownerId })
+      .andWhere('valuation.property_id = :propertyId', { propertyId })
+      .andWhere('valuation.valuation_date <= :asOf', { asOf: toDateStr(asOf) })
+      .orderBy('valuation.valuation_date', 'DESC')
+      .getOne();
+    return valuation?.valuationAmount;
+  }
+
   async calculateReturn(
     propertyId: string,
     ownerId: string,
@@ -120,7 +137,7 @@ export class PortfolioAnalyticsService {
     }
 
     const asOfDate = asOf ? new Date(asOf) : new Date();
-    const windowStart = yearStartOf(asOfDate);
+    const windowStart = financialYearStartOf(asOfDate);
 
     const { gross, net } = await this.getNetIncome(propertyId, ownerId, windowStart, asOfDate);
     const annualisedGrossIncome = annualise(gross, windowStart, asOfDate);
@@ -161,7 +178,7 @@ export class PortfolioAnalyticsService {
     });
 
     const asOfDate = new Date();
-    const windowStart = yearStartOf(asOfDate);
+    const windowStart = financialYearStartOf(asOfDate);
 
     let portfolioValue = 0;
     let totalCostBase = 0;
@@ -218,7 +235,7 @@ export class PortfolioAnalyticsService {
     to?: string,
     includePersonal = false,
   ): Promise<PropertyRankingItem[]> {
-    const fromDate = from ? new Date(from) : yearStartOf(new Date());
+    const fromDate = from ? new Date(from) : financialYearStartOf(new Date());
     const toDate = to ? new Date(to) : new Date();
 
     const properties = await this.propertyRepo.find({
@@ -257,7 +274,7 @@ export class PortfolioAnalyticsService {
     to?: string,
     includePersonal = false,
   ): Promise<PropertyRankingItem[]> {
-    const fromDate = from ? new Date(from) : yearStartOf(new Date());
+    const fromDate = from ? new Date(from) : financialYearStartOf(new Date());
     const toDate = to ? new Date(to) : new Date();
 
     const qb = this.maintenanceRecordRepo
@@ -287,5 +304,79 @@ export class PortfolioAnalyticsService {
       propertyName: row.propertyName,
       value: parseFloat(row.value),
     }));
+  }
+
+  /** Accountant-facing report bounded to a single Australian financial year (1 Jul - 30 Jun). */
+  async getFinancialYearReport(
+    ownerId: string,
+    fyStart: Date,
+    fyEnd: Date,
+    includePersonal = false,
+  ): Promise<FinancialYearReportResponse> {
+    const properties = await this.propertyRepo.find({
+      where: { ownerId, ...(includePersonal ? {} : { category: PropertyCategory.INVESTMENT }) },
+      order: { name: 'ASC' },
+    });
+
+    const totals = {
+      grossIncome: 0,
+      netIncome: 0,
+      expensesTotal: 0,
+      depreciationDiminishingValue: 0,
+      depreciationPrimeCost: 0,
+    };
+
+    const lines = [];
+    for (const property of properties) {
+      const [{ gross, net: rentalNet }, expensesTotal, depreciationRows, openingValuation, closingValuation] = await Promise.all([
+        this.sumRentalIncome(property.id, ownerId, fyStart, fyEnd),
+        this.sumPropertyExpenses(property.id, ownerId, fyStart, fyEnd),
+        this.depreciationScheduleRepo.find({
+          where: {
+            ownerId,
+            propertyId: property.id,
+            financialYearStart: toDateStr(fyStart),
+            financialYearEnd: toDateStr(fyEnd),
+          },
+        }),
+        this.getValuationAsOf(property.id, ownerId, new Date(fyStart.getTime() - MS_PER_DAY)),
+        this.getValuationAsOf(property.id, ownerId, fyEnd),
+      ]);
+
+      const depreciationDiminishingValue = depreciationRows
+        .filter((row) => row.method === DepreciationMethod.DIMINISHING_VALUE)
+        .reduce((sum, row) => sum + row.totalAmount, 0);
+      const depreciationPrimeCost = depreciationRows
+        .filter((row) => row.method === DepreciationMethod.PRIME_COST)
+        .reduce((sum, row) => sum + row.totalAmount, 0);
+
+      const netIncome = rentalNet - expensesTotal;
+
+      lines.push({
+        propertyId: property.id,
+        propertyName: property.name,
+        grossIncome: gross,
+        netIncome,
+        expensesTotal,
+        depreciationDiminishingValue: depreciationDiminishingValue || undefined,
+        depreciationPrimeCost: depreciationPrimeCost || undefined,
+        openingValuation,
+        closingValuation,
+      });
+
+      totals.grossIncome += gross;
+      totals.netIncome += netIncome;
+      totals.expensesTotal += expensesTotal;
+      totals.depreciationDiminishingValue += depreciationDiminishingValue;
+      totals.depreciationPrimeCost += depreciationPrimeCost;
+    }
+
+    return {
+      financialYearLabel: financialYearLabel(fyStart),
+      periodStart: toDateStr(fyStart),
+      periodEnd: toDateStr(fyEnd),
+      properties: lines,
+      totals,
+    };
   }
 }

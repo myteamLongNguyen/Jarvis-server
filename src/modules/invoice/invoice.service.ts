@@ -56,6 +56,17 @@ export class InvoiceService {
 
     return this.invoiceRepo.manager.transaction(async (manager) => {
       const invoice = manager.create(InvoiceEntity, { ...invoiceFields, ownerId });
+
+      // Placeholder pay-confirmation: for now, attaching the source document at
+      // creation time (i.e. the invoice was uploaded) is treated as proof of
+      // payment, so we auto-mark it PAID instead of requiring a separate manual
+      // confirmation step. Revisit once a real payment/reconciliation flow exists.
+      if (invoice.sourceDocumentId) {
+        invoice.status = InvoiceStatus.PAID;
+        invoice.paidDate = new Date().toISOString().slice(0, 10);
+        invoice.paidAmount = invoice.totalAmount;
+      }
+
       const savedInvoice = await manager.save(invoice);
 
       let savedLineItems: InvoiceLineItemEntity[] = [];

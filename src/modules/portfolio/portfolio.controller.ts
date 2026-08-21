@@ -7,10 +7,13 @@ import {
   PortfolioSummaryResponse,
   PropertyRankingItem,
   PropertyRankingQueryDto,
+  FinancialYearReportQueryDto,
+  FinancialYearReportResponse,
 } from '../../dto/portfolio.dto';
 import { StandardDataResponse } from '../../dto/standard';
 import { AuthUser } from '../../decorators/user.decorator';
 import { AuthUserPayload } from '../../types/auth';
+import { parseFinancialYearParam } from '../../core/utils';
 
 @ApiBearerAuth()
 @ApiTags('portfolio')
@@ -66,5 +69,16 @@ export class PortfolioController {
       query.includePersonal,
     );
     return { success: true, message: 'Maintenance by property', data };
+  }
+
+  @Get('fy-report')
+  @ApiOperation({ summary: 'Income/expense/depreciation/valuation report for a single Australian financial year (1 Jul - 30 Jun), per property' })
+  async getFinancialYearReport(
+    @Query() query: FinancialYearReportQueryDto,
+    @AuthUser() user: AuthUserPayload,
+  ): Promise<StandardDataResponse<FinancialYearReportResponse>> {
+    const { start, end } = parseFinancialYearParam(query.fy);
+    const data = await this.portfolioAnalyticsService.getFinancialYearReport(user.id, start, end, query.includePersonal);
+    return { success: true, message: 'Financial year report', data };
   }
 }
