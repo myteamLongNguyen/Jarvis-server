@@ -30,6 +30,11 @@ export class CreateDocumentRequest {
   @IsDateString()
   documentDate: string;
 
+  @ApiPropertyOptional({ description: 'Renewal/expiry date, e.g. for INSURANCE_POLICY or COMPLIANCE_CERT documents' })
+  @IsOptional()
+  @IsDateString()
+  expiryDate?: string;
+
   @ApiProperty()
   @IsString()
   googleDriveFileId: string;
@@ -89,6 +94,11 @@ export class UploadDocumentRequest {
   @ApiProperty()
   @IsDateString()
   documentDate: string;
+
+  @ApiPropertyOptional({ description: 'Renewal/expiry date, e.g. for INSURANCE_POLICY or COMPLIANCE_CERT documents' })
+  @IsOptional()
+  @IsDateString()
+  expiryDate?: string;
 }
 
 export class DocumentQueryDto extends PaginationQueryDto {
@@ -116,6 +126,7 @@ export class DocumentResponse {
   @ApiProperty() title: string;
   @ApiPropertyOptional() description?: string;
   @ApiProperty() documentDate: string;
+  @ApiPropertyOptional() expiryDate?: string;
   @ApiPropertyOptional() googleDriveFileId?: string;
   @ApiPropertyOptional() googleDriveFolderPath?: string;
   @ApiPropertyOptional() mimeType?: string;

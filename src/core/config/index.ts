@@ -45,6 +45,10 @@ const config: Config = {
     supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
     bucket: process.env.SUPABASE_STORAGE_BUCKET,
   },
+  ai: {
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+    chatModel: process.env.ANTHROPIC_CHAT_MODEL || 'claude-sonnet-5',
+  },
 };
 
 export default config;

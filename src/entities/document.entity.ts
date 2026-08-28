@@ -58,6 +58,10 @@ export class DocumentEntity extends BaseEntity {
   @Column({ type: 'date', name: 'document_date' })
   documentDate: string;
 
+  /** Renewal/expiry date for time-bound documents (INSURANCE_POLICY, COMPLIANCE_CERT, etc.) — powers the reminders feed. */
+  @Column({ type: 'date', name: 'expiry_date', nullable: true })
+  expiryDate: string;
+
   @Column({ type: 'enum', enum: StorageProvider, name: 'storage_provider', default: StorageProvider.SUPABASE })
   storageProvider: StorageProvider;
 

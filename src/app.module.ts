@@ -19,6 +19,8 @@ import { DepreciationScheduleModule } from './modules/depreciation-schedule/depr
 import { MaintenanceRecordModule } from './modules/maintenance-record/maintenance-record.module';
 import { DocumentModule } from './modules/document/document.module';
 import { PortfolioModule } from './modules/portfolio/portfolio.module';
+import { ReminderModule } from './modules/reminder/reminder.module';
+import { ChatModule } from './modules/chat/chat.module';
 
 @Module({
   imports: [
@@ -38,6 +40,8 @@ import { PortfolioModule } from './modules/portfolio/portfolio.module';
     MaintenanceRecordModule,
     DocumentModule,
     PortfolioModule,
+    ReminderModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [

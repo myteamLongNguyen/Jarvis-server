@@ -26,9 +26,15 @@ type StorageConfig = {
   bucket: string;
 };
 
+type AiConfig = {
+  anthropicApiKey: string;
+  chatModel: string;
+};
+
 export type Config = {
   database: DBConfig;
   app: AppConfig;
   auth: AuthConfig;
   storage: StorageConfig;
+  ai: AiConfig;
 };

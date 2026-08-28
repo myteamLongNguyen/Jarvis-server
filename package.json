@@ -26,10 +26,12 @@
     "migration:run": "npm run typeorm -- migration:run -d src/core/database/data-source.ts",
     "migration:revert": "npm run typeorm -- migration:revert -d src/core/database/data-source.ts",
     "seed:carr-group-real": "ts-node src/scripts/seed-carr-group-real.ts",
+    "seed:reminder-demo": "ts-node src/scripts/seed-reminder-demo.ts",
     "update:purchase-info": "ts-node src/scripts/update-purchase-info-2026-08.ts",
     "seed:depreciation-996-nepean": "ts-node src/scripts/seed-depreciation-996-nepean.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.122.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",

@@ -27,6 +27,6 @@ import { PortfolioModule } from '../portfolio/portfolio.module';
   ],
   controllers: [PropertyController],
   providers: [PropertyService, PropertyAnalyticsService],
-  exports: [PropertyService],
+  exports: [PropertyService, PropertyAnalyticsService],
 })
 export class PropertyModule {}
