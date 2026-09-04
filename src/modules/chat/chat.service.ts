@@ -12,6 +12,7 @@ import { ReminderService } from '../reminder/reminder.service';
 import { PortfolioAnalyticsService } from '../portfolio/portfolio-analytics.service';
 import { buildChatTools } from './chat.tools';
 import { ChatMessageDto } from './chat.types';
+import { getMaxListeners } from 'events';
 
 // Caps how many tool<->model round trips one reply can take. A well-scoped question
 // (even one touching several tools) resolves in 2-4; this is a backstop against the
@@ -34,6 +35,14 @@ Rules:
   If asked to change something, tell the user to do it in the app.
 - Keep answers concise and concrete — lead with the actual figure/date, then a short explanation.
   Format money as AUD (e.g. $1,234) and dates as DD MMM YYYY.
+- Never silently drop or approximate a count. When a tool result contains N items matching the
+  question, account for all N — don't paraphrase down to "a few" or report only the most recent one.
+  In particular, get_reminders items for unpaid/never-recorded rent can carry a hiddenEarlierCount
+  field: if it's set and non-zero, the real backlog for that lease is bigger than the items shown —
+  state the true total (shown + hiddenEarlierCount), don't just report the count of items you see.
+- For any question about what's outstanding/unpaid/overdue across the portfolio (not scoped to one
+  named period), call get_reminders fresh rather than reasoning from an earlier answer in this
+  conversation — a prior reply may have been scoped to a narrower question and isn't a complete list.
 - When a question spans multiple properties or a time range, prefer the summary/report tools
   (get_portfolio_summary, get_financial_year_report) over listing every row yourself.`;
 

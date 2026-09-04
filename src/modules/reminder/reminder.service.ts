@@ -317,16 +317,20 @@ export class ReminderService {
       const hiddenCount = missing.length - shown.length;
 
       for (const period of shown) {
+        const isEarliestShown = period === shown[0];
         items.push({
           id: `unpaid-rental:missing:${lease.id}:${period.start}`,
           category: ReminderCategory.UNPAID_RENTAL,
           severity: ReminderSeverity.OVERDUE,
           title: 'Rent period never recorded',
-          detail: `${lease.tenant?.name ?? 'Tenant'} at ${propertyNameById.get(lease.propertyId) ?? 'property'} — no rental income logged for ${period.start} to ${period.end}${hiddenCount > 0 && period === shown[0] ? ` (+${hiddenCount} earlier period${hiddenCount === 1 ? '' : 's'} also missing)` : ''}`,
+          // The "+N earlier" count is also carried as a structured field (hiddenEarlierCount)
+          // below — don't rely on parsing it back out of this sentence.
+          detail: `${lease.tenant?.name ?? 'Tenant'} at ${propertyNameById.get(lease.propertyId) ?? 'property'} — no rental income logged for ${period.start} to ${period.end}${hiddenCount > 0 && isEarliestShown ? ` (+${hiddenCount} earlier period${hiddenCount === 1 ? '' : 's'} also missing)` : ''}`,
           dueDate: period.end,
           propertyId: lease.propertyId,
           propertyName: propertyNameById.get(lease.propertyId),
           entityId: lease.id,
+          hiddenEarlierCount: hiddenCount > 0 && isEarliestShown ? hiddenCount : undefined,
         });
       }
     }

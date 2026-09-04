@@ -38,6 +38,11 @@ export class ReminderItem {
   @ApiPropertyOptional() propertyName?: string;
   @ApiPropertyOptional() entityId?: string;
   @ApiPropertyOptional() amount?: number;
+  @ApiPropertyOptional({
+    description:
+      'Set only on the earliest shown period of a lease with a longer backlog: how many further, even-earlier missing periods exist beyond the ones returned here (truncated for display). A non-zero value means the true backlog is larger than the items list suggests.',
+  })
+  hiddenEarlierCount?: number;
 }
 
 export class ReminderCounts {
