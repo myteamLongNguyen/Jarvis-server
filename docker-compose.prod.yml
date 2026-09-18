@@ -1,9 +1,15 @@
-# Production stack for a single Linux server:
-#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+# Production stack for a single Linux server. Two ways to put HTTPS in front:
 #
-# Only Caddy is reachable from outside. Postgres and the API sit on the internal
-# network, and Caddy terminates HTTPS with an automatic Let's Encrypt certificate
-# for API_DOMAIN — iOS refuses plain-HTTP API calls, so this is not optional.
+#   Server already running nginx (the usual case — it owns ports 80/443):
+#     docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+#   then proxy the domain to 127.0.0.1:${API_PORT} and issue the cert with certbot.
+#
+#   Empty server, nothing on 80/443 — let the bundled Caddy do HTTPS itself:
+#     docker compose -f docker-compose.prod.yml --env-file .env.production --profile caddy up -d --build
+#
+# Postgres is never published. The API is published on loopback only, so it is
+# reachable by the host's reverse proxy but not from the internet directly — iOS
+# refuses plain-HTTP API calls, so HTTPS in front of it is not optional.
 services:
   postgres:
     image: pgvector/pgvector:pg16
@@ -26,17 +32,20 @@ services:
     env_file: .env.production
     environment:
       # Inside the compose network the database is reached by service name, and
-      # the API must listen on all interfaces for Caddy to reach it.
+      # the API listens on all interfaces within its container.
       DB_HOST: postgres
       DB_PORT: 5432
       HOST: 0.0.0.0
       PORT: 3001
+    ports:
+      - '127.0.0.1:${API_PORT:-3001}:3001'
     depends_on:
       postgres:
         condition: service_healthy
 
   caddy:
     image: caddy:2-alpine
+    profiles: ['caddy']
     restart: unless-stopped
     ports:
       - '80:80'
