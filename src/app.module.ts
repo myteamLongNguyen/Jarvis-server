@@ -11,6 +11,7 @@ import { PropertyModule } from './modules/property/property.module';
 import { LeaseModule } from './modules/lease/lease.module';
 import { RentReviewModule } from './modules/rent-review/rent-review.module';
 import { InvoiceModule } from './modules/invoice/invoice.module';
+import { SmartScanModule } from './modules/smart-scan/smart-scan.module';
 import { RentalIncomeModule } from './modules/rental-income/rental-income.module';
 import { PropertyExpenseModule } from './modules/property-expense/property-expense.module';
 import { PropertyStatementModule } from './modules/property-statement/property-statement.module';
@@ -32,6 +33,7 @@ import { ChatModule } from './modules/chat/chat.module';
     LeaseModule,
     RentReviewModule,
     InvoiceModule,
+    SmartScanModule,
     RentalIncomeModule,
     PropertyExpenseModule,
     PropertyStatementModule,

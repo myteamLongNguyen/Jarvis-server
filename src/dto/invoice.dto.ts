@@ -182,21 +182,82 @@ export class InvoiceQueryDto extends DateRangeQueryDto {
   direction?: InvoiceDirection;
 }
 
+export class InvoiceScanLineItem {
+  @ApiProperty() lineNumber: number;
+
+  @ApiProperty() description: string;
+
+  @ApiPropertyOptional({ enum: PropertyExpenseCategory }) category?: PropertyExpenseCategory;
+
+  @ApiPropertyOptional() quantity?: number;
+
+  @ApiPropertyOptional() unitAmount?: number;
+
+  @ApiPropertyOptional() amount?: number;
+
+  @ApiPropertyOptional() gstAmount?: number;
+}
+
 export class InvoiceScanResponse {
-  @ApiPropertyOptional({ description: 'Best-guess property match, based on address/suburb text found in the filename or PDF content' })
+  @ApiPropertyOptional({ description: 'Best-guess property match, based on the address/suburb evidence in the document' })
   propertyId?: string;
 
   @ApiPropertyOptional()
   propertyName?: string;
 
-  @ApiPropertyOptional({ enum: ['HIGH', 'LOW'], description: 'How confident the free-text match is — always double-check before saving' })
+  @ApiPropertyOptional({ enum: ['HIGH', 'LOW'], description: 'How confident the match is — always double-check before saving' })
   propertyMatchConfidence?: 'HIGH' | 'LOW';
 
-  @ApiPropertyOptional({ description: 'Best-guess issue date found in the document, ISO format' })
+  @ApiPropertyOptional({ enum: InvoiceDirection })
+  direction?: InvoiceDirection;
+
+  @ApiPropertyOptional({ enum: InvoiceType })
+  invoiceType?: InvoiceType;
+
+  @ApiPropertyOptional()
+  invoiceNumber?: string;
+
+  @ApiPropertyOptional()
+  issuerName?: string;
+
+  @ApiPropertyOptional()
+  issuerAbn?: string;
+
+  @ApiPropertyOptional({ description: 'Issue date found in the document, ISO format' })
   issueDate?: string;
 
-  @ApiPropertyOptional({ description: 'Best-guess total amount found near a "total" label in the document' })
+  @ApiPropertyOptional()
+  dueDate?: string;
+
+  @ApiPropertyOptional()
+  periodStart?: string;
+
+  @ApiPropertyOptional()
+  periodEnd?: string;
+
+  @ApiPropertyOptional()
+  subtotal?: number;
+
+  @ApiPropertyOptional()
+  gstAmount?: number;
+
+  @ApiPropertyOptional({ description: 'Total payable including GST' })
   totalAmount?: number;
+
+  @ApiPropertyOptional()
+  currency?: string;
+
+  @ApiPropertyOptional({ type: [InvoiceScanLineItem], description: 'Only present when the document itemises charges' })
+  lineItems?: InvoiceScanLineItem[];
+
+  @ApiPropertyOptional({ description: 'Anything worth double-checking about this extraction' })
+  notes?: string;
+
+  @ApiProperty({
+    enum: ['AI', 'HEURISTIC'],
+    description: 'AI = read by Claude; HEURISTIC = filename/regex fallback, far less complete',
+  })
+  extractedBy: 'AI' | 'HEURISTIC';
 }
 
 export class InvoiceLineItemResponse {

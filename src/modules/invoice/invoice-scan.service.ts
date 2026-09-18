@@ -5,6 +5,8 @@ import { Repository } from 'typeorm';
 const pdfParse = require('pdf-parse');
 import { PropertyEntity } from '../../entities/property.entity';
 import { InvoiceScanResponse } from '../../dto/invoice.dto';
+import { SmartScanKind } from '../../dto/smart-scan.dto';
+import { SmartScanService } from '../smart-scan/smart-scan.service';
 
 // Common address-word stopwords we don't want to score on (too generic to be
 // a useful match signal on their own).
@@ -26,23 +28,54 @@ export class InvoiceScanService {
   constructor(
     @InjectRepository(PropertyEntity)
     private readonly propertyRepo: Repository<PropertyEntity>,
+    private readonly smartScanService: SmartScanService,
   ) {}
 
+  /**
+   * The invoice form's own attach-a-file box. It reads documents through the same
+   * Smart Scan engine rather than a second AI path of its own — but it only wants
+   * invoice fields, so anything Smart Scan classifies as something else falls
+   * through to the regex pass, as does an AI call that isn't available or fails.
+   */
   async scan(file: Express.Multer.File, ownerId: string): Promise<InvoiceScanResponse> {
+    const properties = await this.propertyRepo.find({ where: { ownerId } });
+
+    try {
+      const scan = await this.smartScanService.scan(file, ownerId);
+      if (scan.documentKind === SmartScanKind.INVOICE && scan.forms.invoice) {
+        return {
+          ...scan.forms.invoice,
+          propertyId: scan.match.propertyId,
+          propertyName: scan.match.propertyName,
+          propertyMatchConfidence: scan.match.propertyMatchConfidence,
+          notes: scan.warnings.join(' ') || undefined,
+          extractedBy: 'AI',
+        };
+      }
+      this.logger.log(`${file.originalname} scanned as ${scan.documentKind}, not an invoice — using the regex pass.`);
+    } catch (err) {
+      this.logger.warn(`Smart Scan unavailable for ${file.originalname}: ${(err as Error).message}`);
+    }
+
+    return this.scanHeuristically(file, properties);
+  }
+
+  private async scanHeuristically(
+    file: Express.Multer.File,
+    properties: PropertyEntity[],
+  ): Promise<InvoiceScanResponse> {
     const text = await this.extractText(file);
     const haystack = `${file.originalname}\n${text}`.toUpperCase();
 
-    const properties = await this.propertyRepo.find({ where: { ownerId } });
     const propertyMatch = this.matchProperty(haystack, properties);
-    const issueDate = this.extractDate(haystack);
-    const totalAmount = this.extractTotal(haystack);
 
     return {
       propertyId: propertyMatch?.property.id,
       propertyName: propertyMatch?.property.name,
       propertyMatchConfidence: propertyMatch?.confidence,
-      issueDate,
-      totalAmount,
+      issueDate: this.extractDate(haystack),
+      totalAmount: this.extractTotal(haystack),
+      extractedBy: 'HEURISTIC',
     };
   }
 

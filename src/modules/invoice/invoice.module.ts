@@ -9,9 +9,11 @@ import { PropertyEntity } from '../../entities/property.entity';
 import { InvoiceController } from './invoice.controller';
 import { InvoiceService } from './invoice.service';
 import { InvoiceScanService } from './invoice-scan.service';
+import { SmartScanModule } from '../smart-scan/smart-scan.module';
 
 @Module({
   imports: [
+    SmartScanModule,
     TypeOrmModule.forFeature([
       InvoiceEntity,
       InvoiceLineItemEntity,

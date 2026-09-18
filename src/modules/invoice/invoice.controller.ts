@@ -43,7 +43,7 @@ export class InvoiceController {
   @ApiBody({ schema: { type: 'object', properties: { file: { type: 'string', format: 'binary' } } } })
   @ApiOperation({
     summary:
-      'Free, non-AI scan of an invoice file: matches filename/PDF text against known property addresses and looks for a date/total — always treat as a pre-fill suggestion, not ground truth',
+      'AI-reads an invoice PDF or image (Claude) and returns the fields needed to pre-fill an invoice: issuer, dates, amounts, GST, line items and the matching property. Falls back to a filename/regex scan when AI is unavailable — check `extractedBy`. Always a pre-fill suggestion, not ground truth.',
   })
   @ApiResponse({ status: 201, type: InvoiceScanResponse })
   async scan(

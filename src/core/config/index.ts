@@ -48,6 +48,7 @@ const config: Config = {
   ai: {
     anthropicApiKey: process.env.ANTHROPIC_API_KEY,
     chatModel: process.env.ANTHROPIC_CHAT_MODEL || 'claude-sonnet-5',
+    scanModel: process.env.ANTHROPIC_SCAN_MODEL || 'claude-opus-5',
   },
 };
 

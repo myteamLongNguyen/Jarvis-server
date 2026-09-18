@@ -1,0 +1,13 @@
+{$API_DOMAIN} {
+	# Smart Scan uploads are capped at 20 MB by the API; leave headroom for the
+	# multipart envelope.
+	request_body {
+		max_size 25MB
+	}
+
+	reverse_proxy api:3001 {
+		# Scan progress is Server-Sent Events: flush every chunk immediately
+		# instead of buffering, or the progress screen stalls until the end.
+		flush_interval -1
+	}
+}

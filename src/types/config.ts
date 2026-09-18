@@ -29,6 +29,7 @@ type StorageConfig = {
 type AiConfig = {
   anthropicApiKey: string;
   chatModel: string;
+  scanModel: string;
 };
 
 export type Config = {
