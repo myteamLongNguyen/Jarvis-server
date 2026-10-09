@@ -159,6 +159,8 @@ export class RentRollRow {
   @ApiPropertyOptional() invoiceNumber?: string;
   @ApiPropertyOptional({ description: 'A filed statement or invoice dated inside the month, when one exists.' })
   documentId?: string;
+  @ApiProperty({ description: 'Worked out from a longer statement rather than filed for this month.' })
+  apportioned: boolean;
   @ApiProperty({ description: 'How many records make up this row. Above one when a property bills per unit.' })
   recordCount: number;
   @ApiPropertyOptional({ description: 'What the lease says this month should be, when a lease is on file.' })

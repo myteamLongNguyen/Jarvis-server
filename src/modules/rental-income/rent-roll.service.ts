@@ -16,6 +16,63 @@ function sum<T>(items: T[], pick: (item: T) => number): number {
   return items.reduce((total, item) => total + (Number(pick(item)) || 0), 0);
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Whole days from one date-only string to another, both ends counted. */
+function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(to) - Date.parse(from)) / DAY_MS) + 1;
+}
+
+/**
+ * Which records speak for a month, and at what value.
+ *
+ * An agent files more than one grain of statement: a run of monthly ones, a
+ * quarterly roll-up, and an end-of-financial-year summary that restates the
+ * whole twelve months. All three overlap the same month, and counting them
+ * together reports the same rent two or three times over.
+ *
+ * So the finest grain wins. A record that sits entirely inside the month is
+ * that month's rent and nothing longer is read beside it. Only where the month
+ * has no record of its own does a longer one speak for it, apportioned by the
+ * share of its period the month covers, and marked so the row can say the
+ * figure was worked out rather than filed.
+ */
+function selectForMonth(
+  overlapping: RentalIncomeEntity[],
+  month: { start: string; end: string },
+): { records: RentalIncomeEntity[]; apportioned: boolean } {
+  const within = overlapping.filter(
+    (record) => record.periodStart >= month.start && record.periodEnd <= month.end,
+  );
+  if (within.length > 0) {
+    return { records: within, apportioned: false };
+  }
+  if (overlapping.length === 0) {
+    return { records: [], apportioned: false };
+  }
+
+  const monthDays = daysBetween(month.start, month.end);
+  const scaled = overlapping.map((record) => {
+    const overlapFrom = record.periodStart > month.start ? record.periodStart : month.start;
+    const overlapTo = record.periodEnd < month.end ? record.periodEnd : month.end;
+    const share = daysBetween(overlapFrom, overlapTo) / Math.max(1, daysBetween(record.periodStart, record.periodEnd));
+
+    // A shallow copy keeps the scaling out of the database; nothing here is saved.
+    const copy = Object.assign(Object.create(Object.getPrototypeOf(record)), record) as RentalIncomeEntity;
+    copy.grossAmount = round(Number(record.grossAmount ?? 0) * share);
+    copy.netAmount = round(Number(record.netAmount ?? 0) * share);
+    copy.agentCommission = round(Number(record.agentCommission ?? 0) * share);
+    if (record.amountReceived !== null && record.amountReceived !== undefined) {
+      copy.amountReceived = round(Number(record.amountReceived) * share);
+    }
+    copy.periodStart = overlapFrom;
+    copy.periodEnd = overlapTo;
+    return copy;
+  });
+
+  return { records: scaled, apportioned: monthDays > 0 };
+}
+
 /** First and last day of a YYYY-MM month, as date-only strings. */
 function monthBounds(month: string): { start: string; end: string } {
   const [year, m] = month.split('-').map(Number);
@@ -132,6 +189,7 @@ export class RentRollService {
         property,
         byProperty.get(property.id) ?? [],
         invoiceById,
+        { start, end },
         leaseByProperty.get(property.id),
         documentByProperty.get(property.id),
       ),
@@ -155,12 +213,14 @@ export class RentRollService {
 
   private buildRow(
     property: PropertyEntity,
-    records: RentalIncomeEntity[],
+    overlapping: RentalIncomeEntity[],
     invoiceById: Map<string, InvoiceEntity>,
+    month: { start: string; end: string },
     lease?: LeaseEntity,
     document?: DocumentEntity,
   ): RentRollRow {
     const expectedFromLease = lease?.baseRentAnnual ? round(Number(lease.baseRentAnnual) / 12) : undefined;
+    const { records, apportioned } = selectForMonth(overlapping, month);
 
     if (records.length === 0) {
       return {
@@ -178,6 +238,7 @@ export class RentRollService {
         hasDocument: Boolean(document),
         documentId: document?.id,
         recordCount: 0,
+        apportioned: false,
         expectedFromLease,
       };
     }
@@ -228,6 +289,7 @@ export class RentRollService {
       invoiceNumber: invoice?.invoiceNumber,
       documentId: document?.id,
       recordCount: records.length,
+      apportioned,
       expectedFromLease,
     };
   }
