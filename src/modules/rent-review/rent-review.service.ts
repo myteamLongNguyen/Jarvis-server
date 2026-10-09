@@ -1,7 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { RentReviewEntity } from '../../entities/rent-review.entity';
+import { RentReviewEntity, RentReviewStatus } from '../../entities/rent-review.entity';
+import { LeaseEntity } from '../../entities/lease.entity';
+import { buildReviewSchedule, ProposedReview } from './review-schedule';
 import {
   CreateRentReviewRequest,
   UpdateRentReviewRequest,
@@ -10,11 +12,15 @@ import {
 } from '../../dto/rent-review.dto';
 import { StandardPaginatedResponse } from '../../dto/standard';
 
+export type ScheduleProposal = ProposedReview & { alreadyRecorded: boolean };
+
 @Injectable()
 export class RentReviewService {
   constructor(
     @InjectRepository(RentReviewEntity)
     private readonly rentReviewRepo: Repository<RentReviewEntity>,
+    @InjectRepository(LeaseEntity)
+    private readonly leaseRepo: Repository<LeaseEntity>,
   ) {}
 
   async create(req: CreateRentReviewRequest, ownerId: string): Promise<RentReviewResponse> {
@@ -40,6 +46,49 @@ export class RentReviewService {
     });
 
     return { offset, limit, total, items: items.map((item) => this.toResponse(item)) };
+  }
+
+  /** The schedule a lease implies, with anything already recorded marked as such. Saves nothing. */
+  async schedule(leaseId: string, ownerId: string): Promise<ScheduleProposal[]> {
+    const lease = await this.leaseRepo.findOne({ where: { id: leaseId, ownerId } });
+    if (!lease) {
+      throw new NotFoundException(`Lease ${leaseId} not found`);
+    }
+    const existing = await this.rentReviewRepo.find({ where: { leaseId, ownerId } });
+    const taken = new Set(existing.map((r) => String(r.reviewDate).slice(0, 10)));
+    return buildReviewSchedule(lease).map((p) => ({ ...p, alreadyRecorded: taken.has(p.reviewDate) }));
+  }
+
+  /**
+   * Writes the proposed schedule. A date that already has a review is left
+   * alone, so running this twice does not duplicate anything and a review the
+   * user has since edited is never overwritten.
+   */
+  async generateSchedule(leaseId: string, ownerId: string): Promise<{ created: RentReviewResponse[]; skipped: number }> {
+    const proposals = await this.schedule(leaseId, ownerId);
+    const toCreate = proposals.filter((p) => !p.alreadyRecorded);
+
+    const created = await Promise.all(
+      toCreate.map(async (p) =>
+        this.toResponse(
+          await this.rentReviewRepo.save(
+            this.rentReviewRepo.create({
+              ownerId,
+              leaseId,
+              reviewDate: p.reviewDate,
+              reviewType: p.reviewType,
+              oldRentAnnual: p.oldRentAnnual,
+              newRentAnnual: p.newRentAnnual,
+              percentChange: p.percentChange,
+              status: RentReviewStatus.SCHEDULED,
+              notes: p.notes,
+            }),
+          ),
+        ),
+      ),
+    );
+
+    return { created, skipped: proposals.length - toCreate.length };
   }
 
   async findOne(id: string, ownerId: string): Promise<RentReviewResponse> {

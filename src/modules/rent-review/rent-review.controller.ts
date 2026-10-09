@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { RentReviewService } from './rent-review.service';
+import { RentReviewService, ScheduleProposal } from './rent-review.service';
 import {
   CreateRentReviewRequest,
   UpdateRentReviewRequest,
@@ -35,6 +35,32 @@ export class RentReviewController {
     @AuthUser() user: AuthUserPayload,
   ): Promise<StandardPaginatedResponse<RentReviewResponse>> {
     return this.rentReviewService.findAll(query, user.id);
+  }
+
+  // Declared before the ':id' route, or Nest would read 'schedule' as an id.
+  @Get('schedule/:leaseId')
+  @ApiOperation({
+    summary:
+      'The review schedule this lease implies: a review on each anniversary plus a market review at the end of the term. Saves nothing; dates that already have a review are flagged.',
+  })
+  async schedule(
+    @Param('leaseId') leaseId: string,
+    @AuthUser() user: AuthUserPayload,
+  ): Promise<StandardDataResponse<ScheduleProposal[]>> {
+    const data = await this.rentReviewService.schedule(leaseId, user.id);
+    return { success: true, message: 'Review schedule built', data };
+  }
+
+  @Post('schedule/:leaseId')
+  @ApiOperation({
+    summary: 'Create the scheduled reviews for a lease. Dates that already have a review are left untouched.',
+  })
+  async generateSchedule(
+    @Param('leaseId') leaseId: string,
+    @AuthUser() user: AuthUserPayload,
+  ): Promise<StandardDataResponse<{ created: RentReviewResponse[]; skipped: number }>> {
+    const data = await this.rentReviewService.generateSchedule(leaseId, user.id);
+    return { success: true, message: 'Review schedule created', data };
   }
 
   @Get(':id')
