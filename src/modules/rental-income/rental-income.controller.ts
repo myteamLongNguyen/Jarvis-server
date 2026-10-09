@@ -1,11 +1,14 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { RentalIncomeService } from './rental-income.service';
+import { RentRollService } from './rent-roll.service';
 import {
   CreateRentalIncomeRequest,
   UpdateRentalIncomeRequest,
   RentalIncomeQueryDto,
   RentalIncomeResponse,
+  RentRollQueryDto,
+  RentRollResponse,
 } from '../../dto/rental-income.dto';
 import { StandardDataResponse, StandardPaginatedResponse, StandardResponse } from '../../dto/standard';
 import { AuthUser } from '../../decorators/user.decorator';
@@ -15,7 +18,10 @@ import { AuthUserPayload } from '../../types/auth';
 @ApiTags('rental-incomes')
 @Controller('rental-incomes')
 export class RentalIncomeController {
-  constructor(private readonly rentalIncomeService: RentalIncomeService) {}
+  constructor(
+    private readonly rentalIncomeService: RentalIncomeService,
+    private readonly rentRollService: RentRollService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a rental income record' })
@@ -35,6 +41,18 @@ export class RentalIncomeController {
     @AuthUser() user: AuthUserPayload,
   ): Promise<StandardPaginatedResponse<RentalIncomeResponse>> {
     return this.rentalIncomeService.findAll(query, user.id);
+  }
+
+  // Declared before the :id route, or Nest reads "rent-roll" as an id.
+  @Get('rent-roll')
+  @ApiOperation({ summary: 'Rent due and received for every property in one month' })
+  @ApiResponse({ status: 200, type: RentRollResponse })
+  async getRentRoll(
+    @Query() query: RentRollQueryDto,
+    @AuthUser() user: AuthUserPayload,
+  ): Promise<StandardDataResponse<RentRollResponse>> {
+    const data = await this.rentRollService.getRentRoll(user.id, query.month, query.includePersonal);
+    return { success: true, message: 'Rent roll', data };
   }
 
   @Get(':id')
