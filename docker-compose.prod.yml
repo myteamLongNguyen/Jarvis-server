@@ -10,6 +10,12 @@
 # Postgres is never published. The API is published on loopback only, so it is
 # reachable by the host's reverse proxy but not from the internet directly — iOS
 # refuses plain-HTTP API calls, so HTTPS in front of it is not optional.
+# Pinned, because Compose otherwise names the project after whatever directory
+# it is run from. The live stack was first brought up as "jarvis", so a deploy
+# from /opt/jarvis-server would otherwise build a second, empty stack beside it
+# and leave the real one running the old image.
+name: jarvis
+
 services:
   postgres:
     image: pgvector/pgvector:pg16
