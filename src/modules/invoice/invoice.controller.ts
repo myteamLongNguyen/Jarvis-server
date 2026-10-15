@@ -10,13 +10,16 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  HttpCode,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { InvoiceService } from './invoice.service';
 import { InvoiceScanService } from './invoice-scan.service';
 import {
+  CheckInvoiceDuplicateRequest,
   ClassifyInvoiceRequest,
+  DuplicateMatchResponse,
   CreateInvoiceRequest,
   InvoiceQueryDto,
   InvoiceResponse,
@@ -55,6 +58,19 @@ export class InvoiceController {
     }
     const data = await this.invoiceScanService.scan(file, user.id);
     return { success: true, message: 'Invoice scanned', data };
+  }
+
+  // Declared before the :id routes so "check-duplicate" is not read as an id.
+  @Post('check-duplicate')
+  @ApiOperation({ summary: 'Invoices already on file that look like this one' })
+  @ApiResponse({ status: 200, type: [DuplicateMatchResponse] })
+  @HttpCode(200)
+  async checkDuplicate(
+    @Body() req: CheckInvoiceDuplicateRequest,
+    @AuthUser() user: AuthUserPayload,
+  ): Promise<StandardDataResponse<DuplicateMatchResponse[]>> {
+    const data = await this.invoiceService.checkDuplicate(req, user.id);
+    return { success: true, message: 'Duplicate check', data };
   }
 
   @Post()

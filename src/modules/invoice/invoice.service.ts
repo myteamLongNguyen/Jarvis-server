@@ -8,12 +8,16 @@ import {
   InvoiceType,
 } from '../../entities/invoice.entity';
 import { InvoiceLineItemEntity } from '../../entities/invoice-line-item.entity';
+import { DocumentEntity } from '../../entities/document.entity';
+import { DuplicateCheckService } from './duplicate-check.service';
 import { RentalIncomeEntity, RentalIncomeStatus } from '../../entities/rental-income.entity';
 import { PropertyExpenseEntity } from '../../entities/property-expense.entity';
 import { MaintenanceRecordEntity, MaintenanceCategory } from '../../entities/maintenance-record.entity';
 import { PropertyExpenseCategory } from '../../entities/enums/property-expense-category.enum';
 import {
+  CheckInvoiceDuplicateRequest,
   ClassifyInvoiceRequest,
+  DuplicateMatchResponse,
   CreateInvoiceRequest,
   InvoiceQueryDto,
   InvoiceResponse,
@@ -49,7 +53,38 @@ export class InvoiceService {
     private readonly invoiceRepo: Repository<InvoiceEntity>,
     @InjectRepository(InvoiceLineItemEntity)
     private readonly invoiceLineItemRepo: Repository<InvoiceLineItemEntity>,
+    @InjectRepository(DocumentEntity)
+    private readonly documentRepo: Repository<DocumentEntity>,
+    private readonly duplicateCheckService: DuplicateCheckService,
   ) {}
+
+
+  /**
+   * Invoices already on file that look like the one being saved. Reporting
+   * only: the caller decides whether to go ahead.
+   */
+  async checkDuplicate(req: CheckInvoiceDuplicateRequest, ownerId: string): Promise<DuplicateMatchResponse[]> {
+    const checksum = req.sourceDocumentId
+      ? (await this.documentRepo.findOne({ where: { id: req.sourceDocumentId, ownerId } }))?.checksumSha256
+      : undefined;
+
+    const matches = await this.duplicateCheckService.find(
+      { ...req, checksum: checksum ?? undefined },
+      ownerId,
+      req.excludeInvoiceId,
+    );
+
+    return matches.map(({ rule, reason, invoice }) => ({
+      rule,
+      reason,
+      invoiceId: invoice.id,
+      issuerName: invoice.issuerName,
+      invoiceNumber: invoice.invoiceNumber,
+      issueDate: invoice.issueDate,
+      totalAmount: Number(invoice.totalAmount),
+      status: invoice.status,
+    }));
+  }
 
   async create(req: CreateInvoiceRequest, ownerId: string): Promise<InvoiceResponse> {
     const { lineItems, ...invoiceFields } = req;

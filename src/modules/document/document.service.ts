@@ -1,6 +1,7 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { createHash } from 'node:crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { DocumentEntity, StorageProvider } from '../../entities/document.entity';
 import {
@@ -54,6 +55,9 @@ export class DocumentService {
       storagePath,
       mimeType: file.mimetype,
       fileSizeBytes: file.size,
+      // Recorded so the same file filed twice can be recognised later. It is
+      // the only duplicate signal that cannot be wrong.
+      checksumSha256: createHash('sha256').update(file.buffer).digest('hex'),
     });
     const saved = await this.documentRepo.save(entity);
     return this.toResponseWithUrl(saved);

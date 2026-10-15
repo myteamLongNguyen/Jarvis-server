@@ -302,3 +302,67 @@ export class InvoiceResponse {
   @ApiProperty() createdAt: Date;
   @ApiProperty() updatedAt: Date;
 }
+
+export class CheckInvoiceDuplicateRequest {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUUID()
+  propertyId?: string;
+
+  @ApiProperty({ enum: InvoiceType })
+  @IsEnum(InvoiceType)
+  invoiceType: InvoiceType;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  invoiceNumber?: string;
+
+  @ApiProperty()
+  @IsString()
+  issuerName: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  issuerAbn?: string;
+
+  @ApiProperty()
+  @IsDateString()
+  issueDate: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  periodStart?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  periodEnd?: string;
+
+  @ApiProperty()
+  @IsNumber()
+  totalAmount: number;
+
+  @ApiPropertyOptional({ description: 'The file this invoice was read from, when there is one.' })
+  @IsOptional()
+  @IsUUID()
+  sourceDocumentId?: string;
+
+  @ApiPropertyOptional({ description: 'Set when editing, so the invoice does not match itself.' })
+  @IsOptional()
+  @IsUUID()
+  excludeInvoiceId?: string;
+}
+
+export class DuplicateMatchResponse {
+  @ApiProperty({ description: 'Which rule fired, strongest first.' }) rule: string;
+  @ApiProperty({ description: 'Plain words for the person looking at the warning.' }) reason: string;
+  @ApiProperty() invoiceId: string;
+  @ApiProperty() issuerName: string;
+  @ApiPropertyOptional() invoiceNumber?: string;
+  @ApiProperty() issueDate: string;
+  @ApiProperty() totalAmount: number;
+  @ApiProperty() status: string;
+}
