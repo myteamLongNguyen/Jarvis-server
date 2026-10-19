@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { IsString, IsEnum, IsOptional, IsUUID, IsInt, IsDateString } from 'class-validator';
 import {
+  DocumentArea,
   DocumentType,
   DocumentIngestionStatus,
   DocumentClassificationStatus,
@@ -73,6 +74,11 @@ export class CreateDocumentRequest {
 export class UpdateDocumentRequest extends PartialType(CreateDocumentRequest) {}
 
 export class UploadDocumentRequest {
+  @ApiPropertyOptional({ enum: DocumentArea, description: 'Which app the document belongs to. Defaults to PROPERTIES.' })
+  @IsOptional()
+  @IsEnum(DocumentArea)
+  area?: DocumentArea;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsUUID()
@@ -102,6 +108,11 @@ export class UploadDocumentRequest {
 }
 
 export class DocumentQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ enum: DocumentArea, description: 'Which app the document belongs to. Defaults to PROPERTIES.' })
+  @IsOptional()
+  @IsEnum(DocumentArea)
+  area?: DocumentArea;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsUUID()
@@ -121,6 +132,7 @@ export class DocumentQueryDto extends PaginationQueryDto {
 export class DocumentResponse {
   @ApiProperty() id: string;
   @ApiProperty() ownerId: string;
+  @ApiProperty({ enum: DocumentArea }) area: DocumentArea;
   @ApiPropertyOptional() propertyId?: string;
   @ApiProperty({ enum: DocumentType }) documentType: DocumentType;
   @ApiProperty() title: string;

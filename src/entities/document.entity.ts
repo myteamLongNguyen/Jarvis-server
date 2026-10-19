@@ -2,6 +2,17 @@ import { Entity, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { PropertyEntity } from './property.entity';
 
+/**
+ * Which app a document belongs to. Jarvis is a shell around several apps and a
+ * document is filed under one of them, so a vessel manual does not surface in
+ * a property search and a lease does not surface on the boat.
+ */
+export enum DocumentArea {
+  PROPERTIES = 'PROPERTIES',
+  ORIAN = 'ORIAN',
+  GENERAL = 'GENERAL',
+}
+
 export enum DocumentType {
   LEASE = 'LEASE',
   LEASE_VARIATION = 'LEASE_VARIATION',
@@ -16,6 +27,13 @@ export enum DocumentType {
   INSURANCE_POLICY = 'INSURANCE_POLICY',
   RATES_NOTICE = 'RATES_NOTICE',
   CORRESPONDENCE = 'CORRESPONDENCE',
+  // Added for the vessel library, where the paperwork is manuals, service and
+  // warranty rather than leases. DEPRECIATION_SCHEDULE closes a gap on the
+  // property side, where a BMT schedule was being filed as OTHER.
+  MANUAL = 'MANUAL',
+  SERVICE_RECORD = 'SERVICE_RECORD',
+  WARRANTY = 'WARRANTY',
+  DEPRECIATION_SCHEDULE = 'DEPRECIATION_SCHEDULE',
   OTHER = 'OTHER',
 }
 
@@ -39,6 +57,9 @@ export enum StorageProvider {
 
 @Entity('documents')
 export class DocumentEntity extends BaseEntity {
+  @Column({ type: 'enum', enum: DocumentArea, default: DocumentArea.PROPERTIES })
+  area: DocumentArea;
+
   @Column({ type: 'uuid', name: 'property_id', nullable: true })
   propertyId: string;
 

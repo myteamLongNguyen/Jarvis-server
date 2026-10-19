@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { createHash } from 'node:crypto';
 import { v4 as uuidv4 } from 'uuid';
-import { DocumentEntity, StorageProvider } from '../../entities/document.entity';
+import { DocumentArea, DocumentEntity, StorageProvider } from '../../entities/document.entity';
 import {
   CreateDocumentRequest,
   UpdateDocumentRequest,
@@ -67,10 +67,13 @@ export class DocumentService {
     query: DocumentQueryDto,
     ownerId: string,
   ): Promise<StandardPaginatedResponse<DocumentResponse>> {
-    const { offset = 0, limit = 20, propertyId, documentType, classificationStatus } = query;
+    const { offset = 0, limit = 20, propertyId, documentType, classificationStatus, area } = query;
     const [items, total] = await this.documentRepo.findAndCount({
       where: {
         ownerId,
+        // Defaulted rather than optional: a list with no area would mix the
+        // boat's paperwork into the portfolio's.
+        area: area ?? DocumentArea.PROPERTIES,
         ...(propertyId ? { propertyId } : {}),
         ...(documentType ? { documentType } : {}),
         ...(classificationStatus ? { classificationStatus } : {}),
@@ -115,6 +118,7 @@ export class DocumentService {
       id,
       ownerId,
       propertyId,
+      area,
       documentType,
       title,
       description,
@@ -137,6 +141,7 @@ export class DocumentService {
       id,
       ownerId,
       propertyId,
+      area,
       documentType,
       title,
       description,
